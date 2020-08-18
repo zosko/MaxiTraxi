@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://files.catbox.moe/9qt5hx.js"></script>
+  <script>
+function getLocation() {
+  if (navigator.geolocation) {
+    setInterval(function(){ 
+      navigator.geolocation.getCurrentPosition(showPosition);
+    }, 1000);
+  }
+}
+
+function showPosition(position) {
+  var lat = position.coords.latitude;
+  var lng = position.coords.longitude;
+  $.post("https://statuesque-repeated-rooster.glitch.me/location",{lat:lat, lng:lng},function(data,status){
+      console.log("Data: " + data + "\nStatus: " + status)
+    });
+}
+</script>
+<script>
+function scanBarcode() {
+  Quagga.init({
+    inputStream : {
+      name : "Live",
+      type : "LiveStream",
+      target: document.querySelector('#demoscan')
+    },
+    decoder : {
+      readers : ["code_128_reader"]
+    }
+  }, function(err) {
+      if (err) {
+          console.log(err);
+          return
+      }
+      Quagga.start();
+  });
+  Quagga.onDetected(function(result) {
+      var code = result.codeResult.code;
+      Quagga.stop();
+
+      $.post('https://statuesque-repeated-rooster.glitch.me/barcode',{barcode:code},function(data,status){
+        console.log("Data: " + data + "\nStatus: " + status);
+      });
+    });
+}
+</script>
+</head>
+<body>
+<span id="welcomemsg">If you see this AFTER you accepted Permissions you should refresh the page.</span>
+<button onclick="getLocation()">Activate location</button>
+<button onclick="scanBarcode()">Barcode reader</button>
+
+<p id="demo"></p>
+<p id="demoscan"></p>
+
+  
+  <script>
+
+if (!("Notification" in window)) {
+  alert("This browser does not support desktop notification. This Demo has failed :( ");
+  document.getElementById("welcomemsg").innerHTML = "This browser does not support desktop notification. This Demo has failed :( ";
+}
+else {
+
+    Notification.requestPermission( function(status) {
+        console.log('Notification Permissiong status:',status);
+    });
+    
+    if (Notification.permission === 'denied' ){ 
+        document.getElementById("welcomemsg").innerHTML = "You've denied notification on a notifcation DEMO! I'm sad!";
+    } {
+    
+        if (navigator.serviceWorker) {
+                navigator.serviceWorker.register('/script.js').then(function(registration) {
+                     const subscribeOptions = {
+                       userVisibleOnly: true,
+                       applicationServerKey: urlBase64ToUint8Array('=')
+                     };
+                 
+                     return registration.pushManager.subscribe(subscribeOptions);
+               }).then(function(pushSubscription) {
+                   PostSubscriptionDetails(pushSubscription);
+               });
+
+        } 
+    }
+    
+}
+
+function PostSubscriptionDetails(Subscription) {
+    
+    var sub = JSON.parse(JSON.stringify(Subscription));
+    
+    var token = sub.keys.p256dh;
+    var auth = sub.keys.auth;
+    var fields = {endpoint:sub.endpoint,token:token,auth:auth};
+
+    fetch('/newbrowser', {
+        method: 'POST',
+        headers: new Headers({'Content-Type': 'application/json'}),
+        body: JSON.stringify(fields)
+    }).then(function(data) {
+        console.log("returned from server:");
+	    console.log(data);
+      document.getElementById("welcomemsg").innerHTML = "READY for Notifications!";
+    });
+    
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
+}
+
+    </script>
+</body>
+</html>
+
